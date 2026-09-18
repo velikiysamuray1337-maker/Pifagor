@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Геометрия — 3D анимации</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a1a;
+            font-family: Arial, sans-serif;
+        }
+        #formula {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            text-align: center;
+            color: #ffd93d;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 30px #ffd93d;
+            opacity: 0;
+            transition: opacity 1.5s;
+            pointer-events: none;
+            z-index: 5;
+        }
+        #formula.show { opacity: 1; }
+
+        /* Переключатель тем */
+        #themeSwitcher {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: rgba(22, 33, 62, 0.85);
+            padding: 8px;
+            border-radius: 50px;
+            border: 2px solid #4d96ff;
+            box-shadow: 0 0 25px rgba(77, 150, 255, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: calc(100vw - 30px);
+        }
+
+        .theme-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 40px;
+            background: transparent;
+            color: #a0b0d0;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .theme-btn:hover { color: #fff; background: rgba(77, 150, 255, 0.2); }
+        .theme-btn.active {
+            background: linear-gradient(135deg, #4d96ff, #6bcb77);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(77, 150, 255, 0.7);
+        }
+
+        /* Кнопка "?" */
+        #helpBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4d96ff, #6bcb77);
+            color: #fff;
+            font-size: 36px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(77, 150, 255, 0.6);
+            transition: all 0.3s ease;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #helpBtn:hover { transform: scale(1.1); box-shadow: 0 0 40px rgba(77, 150, 255, 0.9); }
+        #helpBtn.active {
+            transform: rotate(90deg) scale(1.1);
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+        }
+
+        /* Панель с информацией */
+        #infoPanel {
+            position: fixed;
+            bottom: 110px;
+            right: 30px;
+            width: 380px;
+            max-width: calc(100vw - 60px);
+            background: rgba(22, 33, 62, 0.95);
+            border: 2px solid #4d96ff;
+            border-radius: 16px;
+            padding: 24px;
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.6;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(77, 150, 255, 0.4);
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            z-index: 99;
+        }
+        #infoPanel.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        #infoPanel h2 { margin: 0 0 12px 0; color: #6bcb77; font-size: 22px; }
+        #infoPanel p { margin: 10px 0; color: #e0e0e0; }
+        #infoPanel .formula-text {
+            text-align: center;
+            font-size: 22px;
+            color: #ffd93d;
+            margin: 16px 0;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(255, 217, 61, 0.5);
+        }
+        #infoPanel .close-hint {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-top: 12px;
+            font-style: italic;
+        }
+
+        /* QR-код */
+        #qrBox {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 110px;
+            height: 110px;
+            background: rgba(22, 33, 62, 0.95);
+            border: 2px solid #4d96ff;
+            border-radius: 14px;
+            padding: 8px;
+            box-shadow: 0 0 20px rgba(77, 150, 255, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        #qrBox:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(77, 150, 255, 0.7);
+        }
+        #qrBox img {
+            width: 90px;
+            height: 90px;
+            border-radius: 6px;
+            image-rendering: pixelated;
+        }
+        #qrLabel {
+            font-size: 9px;
+            color: #a0b0d0;
+            text-align: center;
+            margin-top: 4px;
+            line-height: 1.2;
+        }
+        #qrBox .tooltip {
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 33, 62, 0.98);
+            color: #fff;
+            font-size: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            border: 1px solid #4d96ff;
+        }
+        #qrBox:hover .tooltip { opacity: 1; }
+
+        @media (max-width: 700px) {
+            .theme-btn { padding: 8px 12px; font-size: 11px; }
+            #formula { font-size: 28px; }
+            #qrBox { width: 80px; height: 80px; }
+            #qrBox img { width: 64px; height: 64px; }
+            #qrLabel { font-size: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="themeSwitcher">
+        <button class="theme-btn active" data-theme="pythagoras">Пифагор</button>
+        <button class="theme-btn" data-theme="angles">Внешние углы</button>
+        <button class="theme-btn" data-theme="trapezoid">Площадь трапеции</button>
+        <button class="theme-btn" data-theme="triangle_area">Площадь треугольника</button>
+    </div>
+
+    <div id="formula"></div>
+
+    <!-- QR-код -->
+    <div id="qrBox" title="Наведите, чтобы увидеть подсказку">
+        <div class="tooltip">Отсканируйте, чтобы открыть проект</div>
+        <img id="qrImage" alt="QR-код" />
+        <div id="qrLabel">Наведите телефон<br>на QR-код</div>
+    </div>
+
+    <button id="helpBtn" title="Что это за теорема?">?</button>
+
+    <div id="infoPanel">
+        <h2 id="panelTitle"></h2>
+        <div id="panelContent"></div>
+        <p class="close-hint">Нажмите на «?» ещё раз, чтобы закрыть</p>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // ============ QR-КОД ============
+        // Генерируем QR-код со ссылкой на текущую страницу
+        function generateQR() {
+            const currentUrl = window.location.href;
+            // Используем API для генерации QR-кода
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl)}&bgcolor=16213e&color=ffffff&margin=0`;
+            document.getElementById('qrImage').src = qrUrl;
+        }
+        generateQR();
+
+        // ============ СЦЕНА ============
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x0a0a1a, 15, 80);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(8, 6, 12);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = false;
+        controls.enableZoom = true;
+        controls.target.set(0, 0, 0);
+
+        // ============ ПОСТОБРАБОТКА (BLOOM) ============
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.8,   // сила свечения
+            0.6,   // радиус
+            0.85   // порог
+        );
+        composer.addPass(bloomPass);
+
+        // ============ СВЕТ ============
+        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(6, 12, 8);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.left = -15;
+        dirLight.shadow.camera.right = 15;
+        dirLight.shadow.camera.top = 15;
+        dirLight.shadow.camera.bottom = -15;
+        dirLight.shadow.camera.near = 1;
+        dirLight.shadow.camera.far = 40;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const pointLight1 = new THREE.PointLight(0x4d96ff, 2, 30);
+        pointLight1.position.set(-6, 5, 6);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff6b6b, 2, 30);
+        pointLight2.position.set(6, -3, -6);
+        scene.add(pointLight2);
+
+        const fillLight = new THREE.DirectionalLight(0x6bcb77, 0.4);
+        fillLight.position.set(-5, 3, -5);
+        scene.add(fillLight);
+
+        // ============ ПОЛ С ОТРАЖЕНИЕМ ============
+        const floorGeom = new THREE.PlaneGeometry(60, 60);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x0d1226,
+            metalness: 0.9,
+            roughness: 0.15,
+            envMapIntensity: 1
+        });
+        const floor = new THREE.Mesh(floorGeom, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -4;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Сетка на полу
+        const gridHelper = new THREE.GridHelper(60, 60, 0x4d96ff, 0x1a3a6a);
+        gridHelper.position.y = -3.99;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.25;
+        scene.add(gridHelper);
+
+        // ============ ЗВЁЗДЫ ============
+        const particlesGeom = new THREE.BufferGeometry();
+        const particlesCount = 800;
+        const posArray = new Float32Array(particlesCount * 3);
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 100;
+        }
+        particlesGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particles = new THREE.Points(
+            particlesGeom,
+            new THREE.PointsMaterial({ size: 0.08, color: 0xffffff, transparent: true, opacity: 0.7 })
+        );
+        scene.add(particles);
+
+        // ============ ГРУППЫ ============
+        const groups = {
+            pythagoras: new THREE.Group(),
+            angles: new THREE.Group(),
+            trapezoid: new THREE.Group(),
+            triangle_area: new THREE.Group()
+        };
+        Object.values(groups).forEach(g => {
+            g.visible = false;
+            scene.add(g);
+        });
+
+        // ============ ОБЩИЕ ФУНКЦИИ ============
+        function createLabel(text, position, color, size = 1.5) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.font = 'bold 80px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 128, 64);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: new THREE.CanvasTexture(canvas), transparent: true
+            }));
+            sprite.position.copy(position);
+            sprite.scale.set(size, size * 0.5, 1);
+            return sprite;
+        }
+
+        function createPolygon(points, color, opacity = 0.5) {
+            const shape = new THREE.Shape();
+            shape.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) shape.lineTo(points[i].x, points[i].y);
+            shape.closePath();
+
+            const mesh = new THREE.Mesh(
+                new THREE.ShapeGeometry(shape),
+                new THREE.MeshPhysicalMaterial({
+                    color, transparent: true, opacity,
+                    side: THREE.DoubleSide, emissive: color,
+                    emissiveIntensity: 0.3, metalness: 0.4, roughness: 0.3
+                })
+            );
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            const edges = new THREE.LineLoop(
+                new THREE.BufferGeometry().setFromPoints(points),
+                new THREE.LineBasicMaterial({ color: 0xffffff })
+            );
+            mesh.add(edges);
+            return mesh;
+        }
+
+        // ============================================================
+        //  ТЕМА 1: ПИФАГОР
+        // ============================================================
+        (function buildPythagoras() {
+            const g = groups.pythagoras;
+            const a = 3, b = 4;
+            const A = new THREE.Vector3(0, 0, 0);
+            const B = new THREE.Vector3(a, 0, 0);
+            const C = new THREE.Vector3(0, b, 0);
+
+            const triGeom = new THREE.BufferGeometry();
+            triGeom.setAttribute('position', new THREE.Float32BufferAttribute([
+                A.x, A.y, A.z, B.x, B.y, B.z, C.x, C.y, C.z
+            ], 3));
+            triGeom.setIndex([0, 1, 2]);
+            triGeom.computeVertexNormals();
+
+            const triangle = new THREE.Mesh(triGeom, new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, transparent: true, opacity: 0.2,
+                side: THREE.DoubleSide, emissive: 0x4d96ff, emissiveIntensity: 0.3
+            }));
+            triangle.castShadow = true;
+            g.add(triangle);
+
+            g.add(new THREE.LineSegments(
+                new THREE.EdgesGeometry(triGeom),
+                new THREE.LineBasicMaterial({ color: 0xffffff })
+            ));
+
+            function createSquare(p1, p2, color) {
+                const dir = new THREE.Vector3().subVectors(p2, p1);
+                const len = dir.length();
+                const perp = new THREE.Vector3(-dir.y, dir.x, 0).normalize().multiplyScalar(len);
+                const p3 = new THREE.Vector3().addVectors(p2, perp);
+                const p4 = new THREE.Vector3().addVectors(p1, perp);
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.Float32BufferAttribute([
+                    p1.x, p1.y, p1.z, p2.x, p2.y, p2.z,
+                    p3.x, p3.y, p3.z, p4.x, p4.y, p4.z
+                ], 3));
+                geom.setIndex([0, 1, 2, 0, 2, 3]);
+                geom.computeVertexNormals();
+                const mesh = new THREE.Mesh(geom, new THREE.MeshPhysicalMaterial({
+                    color, transparent: true, opacity: 0.65,
+                    side: THREE.DoubleSide, emissive: color,
+                    emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3
+                }));
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                mesh.add(new THREE.LineSegments(
+                    new THREE.EdgesGeometry(geom),
+                    new THREE.LineBasicMaterial({ color: 0xffffff })
+                ));
+                return mesh;
+            }
+
+            const sqA = createSquare(A, B, 0xff6b6b);
+            const sqB = createSquare(A, C, 0x4d96ff);
+            const sqC = createSquare(B, C, 0x6bcb77);
+            g.add(sqA, sqB, sqC);
+            sqA.scale.set(0, 0, 0);
+            sqB.scale.set(0, 0, 0);
+            sqC.scale.set(0, 0, 0);
+
+            g.add(createLabel('a', new THREE.Vector3(a / 2, -0.5, 0), '#ff6b6b'));
+            g.add(createLabel('b', new THREE.Vector3(-0.5, b / 2, 0), '#4d96ff'));
+            g.add(createLabel('c', new THREE.Vector3(a / 2 + 0.4, b / 2 + 0.4, 0), '#6bcb77'));
+
+            g.userData = { triangle, sqA, sqB, sqC };
+        })();
+
+        // ============================================================
+        //  ТЕМА 2: ВНЕШНИЕ УГЛЫ
+        // ============================================================
+        (function buildAngles() {
+            const g = groups.angles;
+            const sides = 5, radius = 3;
+            const points = [];
+            for (let i = 0; i < sides; i++) {
+                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                points.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 0));
+            }
+
+            const shape = new THREE.Shape();
+            shape.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) shape.lineTo(points[i].x, points[i].y);
+            shape.closePath();
+
+            const fill = new THREE.Mesh(
+                new THREE.ShapeGeometry(shape),
+                new THREE.MeshPhysicalMaterial({
+                    color: 0x4d96ff, transparent: true, opacity: 0.25,
+                    side: THREE.DoubleSide, emissive: 0x4d96ff, emissiveIntensity: 0.3
+                })
+            );
+            fill.castShadow = true;
+            g.add(fill);
+
+            g.add(new THREE.LineLoop(
+                new THREE.BufferGeometry().setFromPoints(points),
+                new THREE.LineBasicMaterial({ color: 0xffffff })
+            ));
+
+            const arcs = [];
+            const arcRadius = 0.7;
+            for (let i = 0; i < sides; i++) {
+                const prev = points[(i - 1 + sides) % sides];
+                const curr = points[i];
+                const next = points[(i + 1) % sides];
+                const dirExt = new THREE.Vector3().subVectors(curr, prev).normalize();
+                const dirNext = new THREE.Vector3().subVectors(next, curr).normalize();
+                const extEnd = new THREE.Vector3().addVectors(curr, dirExt.clone().multiplyScalar(1.2));
+                const extLine = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints([curr, extEnd]),
+                    new THREE.LineDashedMaterial({ color: 0xffd93d, dashSize: 0.1, gapSize: 0.08 })
+                );
+                extLine.computeLineDistances();
+                g.add(extLine);
+
+                const angleStart = Math.atan2(dirExt.y, dirExt.x);
+                const angleEnd = Math.atan2(dirNext.y, dirNext.x);
+                let diff = angleEnd - angleStart;
+                while (diff < 0) diff += Math.PI * 2;
+                while (diff > Math.PI * 2) diff -= Math.PI * 2;
+
+                const arc = new THREE.Mesh(
+                    new THREE.RingGeometry(arcRadius - 0.05, arcRadius, 32, 1, angleStart, diff),
+                    new THREE.MeshBasicMaterial({
+                        color: 0xff6b6b, side: THREE.DoubleSide, transparent: true, opacity: 0.8
+                    })
+                );
+                arc.position.copy(curr);
+                arc.position.z = 0.02;
+                g.add(arc);
+                arcs.push(arc);
+            }
+            g.userData = { arcs };
+        })();
+
+        // ============================================================
+        //  ТЕМА 3: ПЛОЩАДЬ ТРАПЕЦИИ
+        // ============================================================
+        (function buildTrapezoid() {
+            const g = groups.trapezoid;
+            const a = 5, b = 2.5, h = 3;
+            const offsetTop = (a - b) / 2;
+            const P1 = new THREE.Vector3(-a / 2, -h / 2, 0);
+            const P2 = new THREE.Vector3(a / 2, -h / 2, 0);
+            const P3 = new THREE.Vector3(offsetTop + b / 2 - a / 2, h / 2, 0);
+            const P4 = new THREE.Vector3(-a / 2 + offsetTop, h / 2, 0);
+
+            const trapezoid = createPolygon([P1, P2, P3, P4], 0x4d96ff, 0.5);
+            g.add(trapezoid);
+            g.add(createLabel('a', new THREE.Vector3(0, -h / 2 - 0.6, 0), '#ff6b6b'));
+            g.add(createLabel('b', new THREE.Vector3(0, h / 2 + 0.5, 0), '#6bcb77'));
+
+            const heightLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, -h / 2, 0.02), new THREE.Vector3(0, h / 2, 0.02)
+                ]),
+                new THREE.LineDashedMaterial({ color: 0xffd93d, dashSize: 0.15, gapSize: 0.1 })
+            );
+            heightLine.computeLineDistances();
+            g.add(heightLine);
+            g.add(createLabel('h', new THREE.Vector3(0.3, 0, 0.05), '#ffd93d', 1));
+
+            const trapezoidCopy = createPolygon([P1, P2, P3, P4], 0x6bcb77, 0.5);
+            g.add(trapezoidCopy);
+
+            const rectW = b;
+            const rectP1 = new THREE.Vector3(-rectW / 2, -h / 2, 0.03);
+            const rectP2 = new THREE.Vector3(rectW / 2, -h / 2, 0.03);
+            const rectP3 = new THREE.Vector3(rectW / 2, h / 2, 0.03);
+            const rectP4 = new THREE.Vector3(-rectW / 2, h / 2, 0.03);
+            const rect = createPolygon([rectP1, rectP2, rectP3, rectP4], 0xffd93d, 0.3);
+            const triL = createPolygon([P1, rectP1, rectP4], 0xff6b6b, 0.6);
+            const triR = createPolygon([P2, rectP2, rectP3], 0xff6b6b, 0.6);
+            g.add(rect, triL, triR);
+
+            trapezoidCopy.visible = false;
+            rect.visible = false;
+            triL.visible = false;
+            triR.visible = false;
+
+            g.userData = { trapezoid, trapezoidCopy, rect, triL, triR, a, b, h };
+        })();
+
+        // ============================================================
+        //  ТЕМА 4: ПЛОЩАДЬ ТРЕУГОЛЬНИКА
+        // ============================================================
+        (function buildTriangleArea() {
+            const g = groups.triangle_area;
+            const a = 5, h = 3;
+            const A = new THREE.Vector3(-a / 2, -h / 2, 0);
+            const B = new THREE.Vector3(a / 2, -h / 2, 0);
+            const C = new THREE.Vector3(-a / 4, h / 2, 0);
+
+            const triangle = createPolygon([A, B, C], 0x4d96ff, 0.6);
+            g.add(triangle);
+            g.add(createLabel('a', new THREE.Vector3(0, -h / 2 - 0.6, 0), '#ff6b6b'));
+            g.add(createLabel('h', new THREE.Vector3(C.x - 0.4, 0, 0.05), '#ffd93d', 1));
+
+            const heightLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(C.x, -h / 2, 0.02), new THREE.Vector3(C.x, h / 2, 0.02)
+                ]),
+                new THREE.LineDashedMaterial({ color: 0xffd93d, dashSize: 0.15, gapSize: 0.1 })
+            );
+            heightLine.computeLineDistances();
+            g.add(heightLine);
+
+            const triangleCopy = createPolygon([A, B, C], 0x6bcb77, 0.6);
+            triangleCopy.visible = false;
+            g.add(triangleCopy);
+
+            const P1 = new THREE.Vector3(-a / 2, -h / 2, 0);
+            const P2 = new THREE.Vector3(a / 2, -h / 2, 0);
+            const P3 = new THREE.Vector3(a / 2 + (C.x - A.x), h / 2, 0);
+            const P4 = new THREE.Vector3(C.x, h / 2, 0);
+            const parallelogram = createPolygon([P1, P2, P3, P4], 0x6bcb77, 0.25);
+            parallelogram.visible = false;
+            g.add(parallelogram);
+
+            g.userData = { triangle, triangleCopy, parallelogram, a, h, A, B, C };
+        })();
+
+        // ============================================================
+        //  ТЕКСТЫ
+        // ============================================================
+        const themes = {
+            pythagoras: {
+                title: '📐 Теорема Пифагора',
+                formula: 'a² + b² = c²',
+                content: `
+                    <p>В прямоугольном треугольнике квадрат гипотенузы равен сумме квадратов катетов.</p>
+                    <div class="formula-text">a² + b² = c²</div>
+                    <p>где <b>a</b> и <b>b</b> — катеты, а <b>c</b> — гипотенуза.</p>
+                    <p>На анимации видно, как квадраты, построенные на катетах (красный и синий), по площади равны квадрату, построенному на гипотенузе (зелёный).</p>
+                `
+            },
+            angles: {
+                title: '🔄 Сумма внешних углов',
+                formula: 'α₁ + α₂ + ... + αₙ = 360°',
+                content: `
+                    <p>Сумма внешних углов любого выпуклого многоугольника всегда равна 360°.</p>
+                    <div class="formula-text">α₁ + α₂ + ... + αₙ = 360°</div>
+                    <p>Внешний угол — это угол между стороной многоугольника и продолжением соседней стороны.</p>
+                    <p>На анимации показан пятиугольник. Красные дуги — это внешние углы.</p>
+                `
+            },
+            trapezoid: {
+                title: '📏 Площадь трапеции',
+                formula: 'S = (a + b) / 2 · h',
+                content: `
+                    <p>Площадь трапеции равна произведению полусуммы оснований на высоту.</p>
+                    <div class="formula-text">S = (a + b) / 2 · h</div>
+                    <p>где <b>a</b> и <b>b</b> — основания, а <b>h</b> — высота.</p>
+                    <p>На анимации трапеция разбивается на прямоугольник и два треугольника.</p>
+                `
+            },
+            triangle_area: {
+                title: '📐 Площадь треугольника',
+                formula: 'S = 1/2 · a · h',
+                content: `
+                    <p>Площадь треугольника равна половине произведения основания на высоту.</p>
+                    <div class="formula-text">S = 1/2 · a · h</div>
+                    <p>где <b>a</b> — основание, а <b>h</b> — высота, проведённая к этому основанию.</p>
+                    <p>На анимации два одинаковых треугольника складываются в параллелограмм.</p>
+                `
+            }
+        };
+
+        // ============================================================
+        //  УПРАВЛЕНИЕ
+        // ============================================================
+        const helpBtn = document.getElementById('helpBtn');
+        const infoPanel = document.getElementById('infoPanel');
+
+        helpBtn.addEventListener('click', () => {
+            helpBtn.classList.toggle('active');
+            infoPanel.classList.toggle('show');
+        });
+
+        let currentTheme = 'pythagoras';
+        let animTime = 0;
+
+        function switchTheme(theme) {
+            if (theme === currentTheme) return;
+            currentTheme = theme;
+            animTime = 0;
+
+            Object.keys(groups).forEach(k => {
+                groups[k].visible = (k === theme);
+            });
+
+            document.getElementById('panelTitle').textContent = themes[theme].title;
+            document.getElementById('panelContent').innerHTML = themes[theme].content;
+            document.getElementById('formula').textContent = themes[theme].formula;
+            document.getElementById('formula').classList.remove('show');
+
+            if (theme === 'trapezoid') {
+                const d = groups.trapezoid.userData;
+                d.trapezoidCopy.visible = false;
+                d.rect.visible = false;
+                d.triL.visible = false;
+                d.triR.visible = false;
+            }
+            if (theme === 'triangle_area') {
+                const d = groups.triangle_area.userData;
+                d.triangleCopy.visible = false;
+                d.parallelogram.visible = false;
+            }
+
+            helpBtn.classList.remove('active');
+            infoPanel.classList.remove('show');
+        }
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                switchTheme(btn.dataset.theme);
+            });
+        });
+
+        groups.pythagoras.visible = true;
+        document.getElementById('panelTitle').textContent = themes.pythagoras.title;
+        document.getElementById('panelContent').innerHTML = themes.pythagoras.content;
+        document.getElementById('formula').textContent = themes.pythagoras.formula;
+
+        // ============================================================
+        //  АНИМАЦИЯ
+        // ============================================================
+        function animate() {
+            requestAnimationFrame(animate);
+            animTime += 0.016;
+
+            if (currentTheme === 'pythagoras') {
+                const d = groups.pythagoras.userData;
+                const p1 = Math.min(Math.max((animTime - 0.5) / 1.5, 0), 1);
+                const p2 = Math.min(Math.max((animTime - 2.5) / 1.5, 0), 1);
+                const p3 = Math.min(Math.max((animTime - 4.5) / 1.5, 0), 1);
+                d.sqA.scale.set(p1, p1, p1);
+                d.sqB.scale.set(p2, p2, p2);
+                d.sqC.scale.set(p3, p3, p3);
+                const pulse = 1 + Math.sin(animTime * 2) * 0.02;
+                d.triangle.scale.set(pulse, pulse, pulse);
+                if (animTime > 6) document.getElementById('formula').classList.add('show');
+            }
+
+            else if (currentTheme === 'angles') {
+                const d = groups.angles.userData;
+                d.arcs.forEach((arc, i) => {
+                    const delay = i * 0.5;
+                    const t = Math.min(Math.max((animTime - delay) / 1.0, 0), 1);
+                    arc.material.opacity = 0.3 + Math.sin(animTime * 3 + i) * 0.5 * t + 0.2 * t;
+                    arc.scale.set(t, t, t);
+                });
+                if (animTime > 4) document.getElementById('formula').classList.add('show');
+            }
+
+            else if (currentTheme === 'trapezoid') {
+                const d = groups.trapezoid.userData;
+                if (animTime > 2 && animTime < 4) {
+                    const t = (animTime - 2) / 2;
+                    d.rect.visible = true;
+                    d.triL.visible = true;
+                    d.triR.visible = true;
+                    d.rect.material.opacity = 0.3 * t;
+                    d.triL.material.opacity = 0.6 * t;
+                    d.triR.material.opacity = 0.6 * t;
+                }
+                if (animTime > 4 && animTime < 6.5) {
+                    d.trapezoidCopy.visible = true;
+                    const t = (animTime - 4) / 2.5;
+                    d.trapezoidCopy.position.x = t * 6;
+                    d.trapezoidCopy.material.opacity = 0.5;
+                }
+                if (animTime > 6.5) document.getElementById('formula').classList.add('show');
+            }
+
+            else if (currentTheme === 'triangle_area') {
+                const d = groups.triangle_area.userData;
+                if (animTime > 2 && animTime < 4) {
+                    d.triangleCopy.visible = true;
+                    const t = (animTime - 2) / 2;
+                    d.triangleCopy.rotation.z = -Math.PI * t;
+                    d.triangleCopy.material.opacity = 0.6 * t;
+                }
+                if (animTime > 4 && animTime < 6.5) {
+                    const t = (animTime - 4) / 2.5;
+                    d.parallelogram.visible = true;
+                    d.parallelogram.material.opacity = 0.25 * t;
+                    d.triangle.material.opacity = 0.6 - 0.3 * t;
+                }
+                if (animTime > 6.5) document.getElementById('formula').classList.add('show');
+            }
+
+            controls.update();
+            particles.rotation.y += 0.0005;
+
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+            bloomPass.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
